@@ -20,15 +20,13 @@ namespace DesktopExtension
 
         private Process process = null;
         private bool LockScreenInProgress = false;
-        private HotKeyWindow hotkeyWindow = null;
-
+      
         public LockScreenAppContext()
         {
             int processId = (int)ApplicationData.Current.LocalSettings.Values["processId"];
             process = Process.GetProcessById(processId);
             process.EnableRaisingEvents = true;
-            process.Exited += HotkeyAppContext_Exited;
-            hotkeyWindow = new HotKeyWindow();
+            process.Exited += DesktopExtensionAppContext_Exited;
             SystemEvents.SessionSwitch += new SessionSwitchEventHandler(SystemEvents_SessionSwitch);
 
         }
@@ -44,7 +42,6 @@ namespace DesktopExtension
                 case SessionSwitchReason.SessionUnlock:
                     SentMessage(false);
                     break;
-
             }
         }
 
@@ -66,7 +63,7 @@ namespace DesktopExtension
             AppServiceResponse response = await connection.SendMessageAsync(ScreebLocked);
         }
 
-        private void HotkeyAppContext_Exited(object sender, EventArgs e)
+        private void DesktopExtensionAppContext_Exited(object sender, EventArgs e)
         {
             Application.Exit();
         }
@@ -77,49 +74,7 @@ namespace DesktopExtension
             LockScreenInProgress = false;
         }
 
-        private async void hotkeys_HotkeyPressed(int ID)
-        {
-
-            // bring the UWP to the foreground (optional)
-            IEnumerable<AppListEntry> appListEntries = await Package.Current.GetAppListEntriesAsync();
-            await appListEntries.First().LaunchAsync();
-
-            // send the key ID to the UWP
-            ValueSet hotkeyPressed = new ValueSet();
-            hotkeyPressed.Add("ID", ID);
-
-            AppServiceConnection connection = new AppServiceConnection();
-            connection.PackageFamilyName = Package.Current.Id.FamilyName;
-            connection.AppServiceName = "HotkeyConnection";
-            AppServiceConnectionStatus status = await connection.OpenAsync();
-            if (status != AppServiceConnectionStatus.Success)
-            {
-                Debug.WriteLine(status);
-                Application.Exit();
-            }
-            connection.ServiceClosed += Connection_ServiceClosed;
-            AppServiceResponse response = await connection.SendMessageAsync(hotkeyPressed);
-        }
-    }
-    public class HotKeyWindow : NativeWindow
-    {
       
-       
-
-        // creates a headless Window to register for and handle WM_HOTKEY
-        public HotKeyWindow()
-        {
-            this.CreateHandle(new CreateParams());
-            Application.ApplicationExit += new EventHandler(Application_ApplicationExit);
-        }
-
-      
-
-        private void Application_ApplicationExit(object sender, EventArgs e)
-        {
-            this.DestroyHandle();
-        }
-
-       
     }
+   
 }
